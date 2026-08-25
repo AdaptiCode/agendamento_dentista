@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelo — Sistema de Agendamento Odontológico | Adapti Code</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #06101A;
+    --bg-soft: #0A1620;
+    --panel: #0F1E2C;
+    --panel-2: #142A3B;
+    --teal: #22D3C5;
+    --blue: #3B9EFF;
+    --deep: #1560D9;
+    --grad: linear-gradient(90deg, var(--blue), var(--teal));
+    --grad-diag: linear-gradient(135deg, var(--deep), var(--blue) 55%, var(--teal));
+    --text: #F1F7FA;
+    --text-dim: #9FB4C2;
+    --text-dim2: #5E7A8A;
+    --line: rgba(34,211,197,0.20);
+    --whats: #25D366;
+    --ok: #22D3C5;
+    --off: #24384A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Inter',sans-serif; background:var(--bg); color:var(--text);
+    line-height:1.5; -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    min-height:100vh;
+  }
+  .display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace; letter-spacing:0.03em;}
+  button{font-family:inherit; cursor:pointer; border:none;}
+  .wrap{max-width:520px; margin:0 auto; padding:0 20px; position:relative; z-index:2;}
+
+  .ambient{position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;}
+  .glow{position:absolute; border-radius:50%; filter:blur(90px); opacity:.28;}
+  .glow-blue{width:380px;height:380px; background:var(--blue); top:-140px; left:-140px;}
+  .glow-teal{width:340px;height:340px; background:var(--teal); top:320px; right:-160px;}
+  .glow-deep{width:300px;height:300px; background:var(--deep); bottom:-100px; left:10%;}
+
+  /* cross watermark pattern */
+  .ambient::after{
+    content:''; position:absolute; inset:0; opacity:.03;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 38px, var(--teal) 38px, var(--teal) 40px),
+                       repeating-linear-gradient(90deg, transparent, transparent 38px, var(--teal) 38px, var(--teal) 40px);
+  }
+
+  /* ---------- demo banner ---------- */
+  .demo-banner{
+    background:var(--panel-2); border-bottom:1px solid var(--line);
+    padding:10px 20px; text-align:center; position:relative; z-index:3;
+  }
+  .demo-banner span{
+    font-size:11.5px; font-weight:600; color:var(--teal); letter-spacing:0.04em;
+  }
+  .demo-banner p{font-size:11px; color:var(--text-dim2); margin-top:2px;}
+
+  /* ---------- header (clinic identity) ---------- */
+  .topbar{padding:18px 20px 0; display:flex; align-items:center; justify-content:space-between; max-width:520px; margin:0 auto; position:relative; z-index:2;}
+  .brand{display:flex; align-items:center; gap:8px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px; opacity:.7;}
+  .brand .code{background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .tag-live{
+    display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--text-dim2);
+  }
+  .tag-live .d{width:6px;height:6px;border-radius:50%; background:var(--ok); box-shadow:0 0 6px var(--ok);}
+
+  .biz-header{padding:22px 0 18px; text-align:center;}
+  .biz-icon{
+    width:56px;height:56px;border-radius:16px; margin:0 auto 12px;
+    background:var(--grad-diag); display:flex; align-items:center; justify-content:center;
+    box-shadow:0 8px 24px rgba(34,211,197,0.30);
+  }
+  .biz-icon svg{width:28px;height:28px; color:#fff;}
+  .biz-header h1{font-family:'Space Grotesk',sans-serif; font-size:21px; font-weight:700; margin-bottom:4px;}
+  .biz-header p{font-size:12.5px; color:var(--text-dim);}
+
+  /* ---------- trust strip ---------- */
+  .trust-strip{display:flex; justify-content:center; gap:18px; padding-bottom:18px;}
+  .trust-item{display:flex; align-items:center; gap:5px; font-size:10.5px; color:var(--text-dim);}
+  .trust-item svg{width:13px;height:13px; color:var(--teal); flex-shrink:0;}
+
+  /* ---------- progress ---------- */
+  .progress{display:flex; gap:6px; padding:6px 0 26px; max-width:520px; margin:0 auto; position:relative; z-index:2;}
+  .progress .seg{flex:1; height:3px; border-radius:3px; background:var(--off); transition:background .3s ease;}
+  .progress .seg.done{background:linear-gradient(90deg,var(--blue),var(--teal));}
+  .progress .seg.active{background:var(--teal); box-shadow:0 0 8px var(--teal);}
+
+  /* ---------- steps ---------- */
+  .step{display:none;}
+  .step.active{display:block; animation:fadeIn .35s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+
+  .step-label{font-size:11px; font-weight:600; color:var(--teal); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;}
+  .step-title{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:700; margin-bottom:18px;}
+
+  /* service cards */
+  .service-list{display:flex; flex-direction:column; gap:10px; margin-bottom:24px;}
+  .service-card{
+    background:var(--panel); border:1.5px solid var(--line); border-radius:12px;
+    padding:14px 16px; display:flex; justify-content:space-between; align-items:center;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .service-card:active{transform:scale(0.98);}
+  .service-card.selected{border-color:var(--teal); background:var(--panel-2); box-shadow:0 0 0 1px var(--teal), 0 0 20px rgba(34,211,197,0.22);}
+  .service-info{display:flex; align-items:center; gap:12px;}
+  .service-icon{
+    width:36px;height:36px;border-radius:10px; background:var(--off); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .service-icon svg{width:18px;height:18px; color:var(--teal);}
+  .service-card.selected .service-icon{background:var(--grad-diag);}
+  .service-card.selected .service-icon svg{color:#fff;}
+  .service-text b{display:block; font-size:14.5px; font-weight:600; margin-bottom:2px;}
+  .service-text span{font-size:11.5px; color:var(--text-dim);}
+  .service-price{font-family:'Space Grotesk',sans-serif; font-size:14.5px; font-weight:700;
+    background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; white-space:nowrap;}
+
+  /* dentist row (profissional) */
+  .dentist-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:20px; scrollbar-width:none;}
+  .dentist-row::-webkit-scrollbar{display:none;}
+  .dentist-chip{
+    flex-shrink:0; width:96px; text-align:center; padding:12px 8px; border-radius:12px;
+    background:var(--panel); border:1.5px solid var(--line); color:var(--text-dim);
+  }
+  .dentist-chip .av{
+    width:34px;height:34px;border-radius:50%; margin:0 auto 6px; background:var(--grad-diag);
+    display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk',sans-serif;
+    font-weight:700; font-size:13px; color:#fff;
+  }
+  .dentist-chip .n{font-size:11px; font-weight:600; color:var(--text);}
+  .dentist-chip .s{font-size:9px; color:var(--text-dim2);}
+  .dentist-chip.selected{border-color:var(--teal); background:var(--panel-2); box-shadow:0 0 0 1px var(--teal);}
+
+  /* date row */
+  .date-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:20px; scrollbar-width:none;}
+  .date-row::-webkit-scrollbar{display:none;}
+  .date-chip{
+    flex-shrink:0; width:58px; text-align:center; padding:10px 4px; border-radius:12px;
+    background:var(--panel); border:1.5px solid var(--line); color:var(--text-dim);
+  }
+  .date-chip .dow{font-size:9.5px; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;}
+  .date-chip .num{font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:var(--text);}
+  .date-chip.selected{border-color:var(--teal); background:var(--grad-diag);}
+  .date-chip.selected .dow, .date-chip.selected .num{color:#fff;}
+  .date-chip.full{opacity:.35;}
+
+  .slot-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:24px;}
+  .slot{
+    text-align:center; padding:11px 0; border-radius:9px; font-size:13px; font-weight:600;
+    background:var(--panel); border:1.5px solid var(--line); color:var(--text);
+  }
+  .slot.taken{color:var(--text-dim2); border-color:transparent; background:var(--bg-soft); text-decoration:line-through; cursor:not-allowed;}
+  .slot.selected{background:var(--grad); color:#06101A; border-color:transparent; box-shadow:0 4px 16px rgba(34,211,197,0.35);}
+
+  /* form */
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px; font-weight:500;}
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--panel); border:1.5px solid var(--line); border-radius:10px;
+    padding:13px 14px; font-size:14.5px; color:var(--text); font-family:inherit;
+  }
+  .field textarea{resize:vertical; min-height:64px;}
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--teal);}
+  .field input::placeholder, .field textarea::placeholder{color:var(--text-dim2);}
+  .field-note{font-size:10.5px; color:var(--text-dim2); margin-top:5px;}
+
+  /* summary card */
+  .summary{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; margin:18px 0 24px;}
+  .summary-row{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line); font-size:13.5px;}
+  .summary-row:last-child{border-bottom:none;}
+  .summary-row span:first-child{color:var(--text-dim);}
+  .summary-row span:last-child{font-weight:600; text-align:right;}
+
+  /* buttons */
+  .btn-row{display:flex; gap:10px;}
+  .btn{
+    flex:1; padding:15px; border-radius:12px; font-size:14.5px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-primary{background:var(--grad-diag); color:#fff; box-shadow:0 8px 20px rgba(34,211,197,0.28);}
+  .btn-primary:disabled{opacity:.35; box-shadow:none;}
+  .btn-ghost{background:var(--panel); color:var(--text-dim); border:1.5px solid var(--line); flex:0 0 auto; width:52px;}
+  .btn-whats{background:var(--whats); color:#07230F;}
+  .btn svg{width:18px;height:18px;}
+
+  /* confirmation */
+  .confirm-check{
+    width:64px;height:64px;border-radius:50%; margin:0 auto 18px; background:var(--grad-diag);
+    display:flex; align-items:center; justify-content:center; box-shadow:0 0 30px rgba(34,211,197,0.3);
+  }
+  .confirm-check svg{width:30px;height:30px; color:#fff;}
+  .confirm-title{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; text-align:center; margin-bottom:6px;}
+  .confirm-sub{font-size:13px; color:var(--text-dim); text-align:center; margin-bottom:22px;}
+
+  /* pre-checkin card on confirmation */
+  .precheck{background:var(--panel); border:1px dashed var(--line); border-radius:12px; padding:14px 16px; margin-bottom:22px;}
+  .precheck b{color:var(--text); display:block; margin-bottom:4px; font-size:12.5px;}
+  .precheck p{font-size:11.5px; color:var(--text-dim); line-height:1.6;}
+
+  /* owner panel toggle */
+  .owner-link{
+    display:block; text-align:center; margin:28px 0 8px; font-size:12px; color:var(--text-dim2);
+    text-decoration:underline; text-underline-offset:3px;
+  }
+
+  .owner-panel{display:none; margin-top:8px;}
+  .owner-panel.open{display:block;}
+  .owner-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+  .owner-head h3{font-family:'Space Grotesk',sans-serif; font-size:15px;}
+  .owner-head span{font-size:11px; color:var(--text-dim2);}
+  .appt-item{
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; margin-bottom:8px;
+  }
+  .appt-item .t{font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--teal); width:52px; flex-shrink:0;}
+  .appt-item .n{flex:1; font-size:13px; font-weight:600; padding:0 8px;}
+  .appt-item .proc{font-size:10.5px; color:var(--text-dim2); padding:0 8px; flex:1;}
+  .appt-item .s{font-size:9.5px; padding:4px 8px; border-radius:100px; font-weight:600; letter-spacing:0.03em;}
+  .appt-item .s.confirmed{background:rgba(34,211,197,0.15); color:var(--ok);}
+  .appt-item .s.pending{background:rgba(59,158,255,0.15); color:var(--blue);}
+
+  .note{
+    background:var(--panel); border:1px dashed var(--line); border-radius:12px; padding:14px 16px;
+    font-size:12px; color:var(--text-dim); margin-top:24px; line-height:1.6;
+  }
+  .note b{color:var(--text);}
+
+  main{padding-bottom:60px; position:relative; z-index:2;}
+  footer{text-align:center; padding:20px; font-size:11px; color:var(--text-dim2); position:relative; z-index:2;}
+</style>
+</head>
+<body>
+
+<div class="ambient">
+  <div class="glow glow-blue"></div>
+  <div class="glow glow-teal"></div>
+  <div class="glow glow-deep"></div>
+</div>
+
+<div class="demo-banner">
+  <span>MODELO DE APRESENTAÇÃO</span>
+  <p>Fluxo real de agendamento para clínicas e consultórios — design e nome do negócio mudam pra cada cliente</p>
+</div>
+
+<div class="topbar">
+  <div class="brand">Adapti<span class="code">Code</span></div>
+  <div class="tag-live"><span class="d"></span>Agenda em tempo real</div>
+</div>
+
+<main>
+  <div class="wrap">
+
+    <div class="biz-header">
+      <div class="biz-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3c0 2-1 2-1 4s1 2 1 4-2 3-2 6a4 4 0 0 0 8 0c0-1.5-.5-2-.5-3.5S14 12 14 10s1-2 1-4-1-4-3-4-4 0-4 1z"/></svg>
+      </div>
+      <h1>Clínica Sorriso Vida</h1>
+      <p>Odontologia geral e estética · Anápolis, GO</p>
+    </div>
+
+    <div class="trust-strip">
+      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>CRO ativo</div>
+      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>Biossegurança</div>
+      <div class="trust-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>Convênios</div>
+    </div>
+
+    <div class="progress">
+      <div class="seg active" id="seg1"></div>
+      <div class="seg" id="seg2"></div>
+      <div class="seg" id="seg3"></div>
+      <div class="seg" id="seg4"></div>
+    </div>
+
+    <!-- STEP 1: SERVICE -->
+    <div class="step active" id="step1">
+      <div class="step-label">Passo 1 de 4</div>
+      <div class="step-title">Qual procedimento você precisa?</div>
+      <div class="service-list" id="serviceList"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="toStep2" disabled>Continuar</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: DENTIST + DATE + TIME -->
+    <div class="step" id="step2">
+      <div class="step-label">Passo 2 de 4</div>
+      <div class="step-title">Escolha o dentista e horário</div>
+
+      <div class="field">
+        <label>Profissional</label>
+      </div>
+      <div class="dentist-row" id="dentistRow"></div>
+
+      <div class="field">
+        <label>Data</label>
+      </div>
+      <div class="date-row" id="dateRow"></div>
+
+      <div class="field">
+        <label>Horário disponível</label>
+      </div>
+      <div class="slot-grid" id="slotGrid"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" data-back="1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="btn btn-primary" id="toStep3" disabled>Continuar</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: PATIENT DATA -->
+    <div class="step" id="step3">
+      <div class="step-label">Passo 3 de 4</div>
+      <div class="step-title">Seus dados</div>
+
+      <div class="field">
+        <label>Nome completo</label>
+        <input type="text" id="inpName" placeholder="Digite seu nome">
+      </div>
+      <div class="field">
+        <label>WhatsApp</label>
+        <input type="tel" id="inpPhone" placeholder="(62) 9 9999-9999">
+      </div>
+      <div class="field">
+        <label>Já é paciente da clínica?</label>
+        <select id="inpPatient">
+          <option value="new">Não, primeira consulta</option>
+          <option value="returning">Sim, já sou paciente</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Observações (opcional)</label>
+        <textarea id="inpNotes" placeholder="Ex.: sente dor, tem convênio, alergias..."></textarea>
+        <p class="field-note">Essas informações ajudam a equipe a se preparar antes da sua chegada.</p>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" data-back="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="btn btn-primary" id="toStep4" disabled>Revisar agendamento</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: SUMMARY + CONFIRM -->
+    <div class="step" id="step4">
+      <div class="step-label">Passo 4 de 4</div>
+      <div class="step-title">Confirme seu agendamento</div>
+
+      <div class="summary" id="summaryBox"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" data-back="3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="btn btn-whats" id="confirmBtn">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.39 1.26 4.81L2 22l5.42-1.35a9.9 9.9 0 0 0 4.62 1.14h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm4.48 14.1c-.25-.12-1.45-.72-1.68-.8-.22-.08-.39-.12-.55.12-.16.25-.63.8-.77.96-.14.16-.28.18-.53.06-.25-.12-1.04-.38-1.98-1.22-.73-.65-1.22-1.46-1.37-1.7-.14-.25-.02-.38.11-.5.11-.11.25-.28.37-.42.12-.14.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.55-1.33-.76-1.83-.2-.48-.4-.42-.55-.42h-.47c-.16 0-.42.06-.64.31-.22.25-.85.83-.85 2.03s.87 2.36.99 2.52c.12.16 1.71 2.62 4.15 3.67.58.25 1.03.4 1.38.51.58.18 1.11.16 1.53.09.47-.07 1.45-.59 1.65-1.16.2-.57.2-1.06.14-1.16-.06-.1-.22-.16-.47-.28z"/></svg>
+          Confirmar agendamento
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 5: DONE -->
+    <div class="step" id="step5">
+      <div class="confirm-check">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="confirm-title">Consulta agendada!</div>
+      <div class="confirm-sub" id="confirmSummary"></div>
+
+      <div class="precheck">
+        <b>Antes da sua consulta</b>
+        <p>Chegue com 10 minutos de antecedência. Traga documento com foto e, se tiver, carteirinha do convênio. Você receberá um lembrete no WhatsApp 24h antes.</p>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="restartBtn">Fazer novo agendamento</button>
+      </div>
+    </div>
+
+    <a class="owner-link" id="ownerToggle">Ver como fica o painel da clínica →</a>
+
+    <div class="owner-panel" id="ownerPanel">
+      <div class="owner-head">
+        <h3 class="display">Agenda de hoje</h3>
+        <span class="mono">TER, 26 AGO</span>
+      </div>
+      <div class="appt-item"><span class="t">09:00</span><span class="n">Camila R.</span><span class="proc">Limpeza</span><span class="s confirmed">CONFIRMADO</span></div>
+      <div class="appt-item"><span class="t">10:30</span><span class="n">Fernanda L.</span><span class="proc">Avaliação ortho</span><span class="s pending">PENDENTE</span></div>
+      <div class="appt-item"><span class="t">13:00</span><span class="n">Juliana M.</span><span class="proc">Clareamento</span><span class="s confirmed">CONFIRMADO</span></div>
+      <div class="appt-item"><span class="t">15:30</span><span class="n">— livre —</span><span class="proc"></span><span class="s pending" style="opacity:.4">ABERTO</span></div>
+      <div class="note">
+        <b>O que isso resolve de verdade:</b> a recepção vê a agenda de todos os dentistas sem precisar abrir WhatsApp, planilha ou caderno. Bloqueio de horário, encaixe e cancelamento em 1 toque, com confirmação automática por WhatsApp.
+      </div>
+    </div>
+
+    <div class="note">
+      <b>Sobre esse modelo:</b> essa é a base funcional real — calendário com disponibilidade por profissional, seleção de procedimento, ficha do paciente, confirmação e painel da clínica. Pra cada cliente, muda o nome, cores, procedimentos e fotos — a engenharia por trás continua a mesma.
+    </div>
+
+  </div>
+
+</main>
+
+<footer>Adapti Code · Modelo de demonstração, sem uso de dados reais</footer>
+
+<script>
+  const services = [
+    { id: 's1', name: 'Consulta e Avaliação', dur: '30 min', price: 'R$ 90', icon: 'M8 3c0 2-1 2-1 4s1 2 1 4-2 3-2 6a4 4 0 0 0 8 0c0-1.5-.5-2-.5-3.5S14 12 14 10s1-2 1-4-1-4-3-4-4 0-4 1z' },
+    { id: 's2', name: 'Limpeza e Profilaxia', dur: '40 min', price: 'R$ 120', icon: 'M12 2l3 5-3 5-3-5 3-5zM6 14l6 8 6-8H6z' },
+    { id: 's3', name: 'Clareamento Dental', dur: '1h', price: 'R$ 350', icon: 'M12 2v20M4 12h16' },
+    { id: 's4', name: 'Extração Simples', dur: '45 min', price: 'R$ 180', icon: 'M12 2a5 5 0 0 1 5 5c0 2-1 3-1 5s1 2 1 4a4 4 0 0 1-8 0c0-2 1-2 1-4s-1-3-1-5a5 5 0 0 1 3-5z' },
+    { id: 's5', name: 'Avaliação Ortodôntica', dur: '30 min', price: 'R$ 100', icon: 'M4 6h16M4 12h16M4 18h16' },
+  ];
+
+  const dentists = [
+    { id: 'd1', name: 'Dra. Paula', spec: 'Clínico geral' },
+    { id: 'd2', name: 'Dr. Renato', spec: 'Ortodontia' },
+    { id: 'd3', name: 'Dra. Bia', spec: 'Estética' },
+  ];
+
+  const dowNames = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+  const today = new Date(2026, 7, 25); // 25 ago 2026 (contexto fixo da demo)
+  const dates = [];
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    dates.push(d);
+  }
+
+  const baseSlots = ['08:00','08:30','09:00','09:30','10:00','11:00','13:30','14:00','14:30','15:30','16:00','17:00'];
+  function seededTaken(dateIdx) {
+    const pattern = [[1,4,7],[0,3,6,9],[2,5],[1,2,8,10],[0,4,5,9,11],[3],[1,6,7,8]];
+    return pattern[dateIdx % pattern.length];
+  }
+
+  let state = { service: null, dentist: null, dateIdx: null, time: null, name: '', phone: '', patient: 'new', notes: '' };
+
+  const iconWrap = (path) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${path}"/></svg>`;
+
+  const serviceList = document.getElementById('serviceList');
+  services.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'service-card';
+    el.dataset.id = s.id;
+    el.innerHTML = `
+      <div class="service-info">
+        <div class="service-icon">${iconWrap(s.icon)}</div>
+        <div class="service-text"><b>${s.name}</b><span>${s.dur}</span></div>
+      </div>
+      <div class="service-price mono">${s.price}</div>`;
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      state.service = s;
+      document.getElementById('toStep2').disabled = false;
+    });
+    serviceList.appendChild(el);
+  });
+
+  const dentistRow = document.getElementById('dentistRow');
+  dentists.forEach(d => {
+    const chip = document.createElement('div');
+    chip.className = 'dentist-chip';
+    chip.innerHTML = `<div class="av">${d.name.split(' ').map(w=>w[0]).slice(0,2).join('')}</div><div class="n">${d.name}</div><div class="s">${d.spec}</div>`;
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.dentist-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+      state.dentist = d;
+      checkStep2();
+    });
+    dentistRow.appendChild(chip);
+  });
+  dentistRow.firstChild.classList.add('selected');
+  state.dentist = dentists[0];
+
+  const dateRow = document.getElementById('dateRow');
+  const slotGrid = document.getElementById('slotGrid');
+
+  function renderDates() {
+    dateRow.innerHTML = '';
+    dates.forEach((d, i) => {
+      const taken = seededTaken(i);
+      const full = taken.length >= baseSlots.length - 2;
+      const chip = document.createElement('div');
+      chip.className = 'date-chip' + (full ? ' full' : '');
+      chip.innerHTML = `<div class="dow">${dowNames[d.getDay()]}</div><div class="num">${d.getDate()}</div>`;
+      if (!full) {
+        chip.addEventListener('click', () => {
+          document.querySelectorAll('.date-chip').forEach(c => c.classList.remove('selected'));
+          chip.classList.add('selected');
+          state.dateIdx = i;
+          state.time = null;
+          checkStep2();
+          renderSlots(i);
+        });
+      }
+      dateRow.appendChild(chip);
+    });
+  }
+
+  function renderSlots(dateIdx) {
+    const taken = seededTaken(dateIdx);
+    slotGrid.innerHTML = '';
+    baseSlots.forEach((t, i) => {
+      const el = document.createElement('div');
+      const isTaken = taken.includes(i);
+      el.className = 'slot' + (isTaken ? ' taken' : '');
+      el.textContent = t;
+      if (!isTaken) {
+        el.addEventListener('click', () => {
+          document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+          el.classList.add('selected');
+          state.time = t;
+          checkStep2();
+        });
+      }
+      slotGrid.appendChild(el);
+    });
+  }
+
+  function checkStep2() {
+    document.getElementById('toStep3').disabled = !(state.dentist && state.dateIdx !== null && state.time);
+  }
+
+  renderDates();
+
+  function goToStep(n) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step' + n).classList.add('active');
+    [1,2,3,4].forEach(i => {
+      const seg = document.getElementById('seg' + i);
+      seg.classList.remove('done','active');
+      if (i < n) seg.classList.add('done');
+      if (i === n) seg.classList.add('active');
+    });
+  }
+
+  document.getElementById('toStep2').addEventListener('click', () => goToStep(2));
+
+  const inpName = document.getElementById('inpName');
+  const inpPhone = document.getElementById('inpPhone');
+  const inpPatient = document.getElementById('inpPatient');
+  const inpNotes = document.getElementById('inpNotes');
+
+  function checkStep3() {
+    document.getElementById('toStep4').disabled = !(inpName.value.trim().length > 1 && inpPhone.value.trim().length > 7);
+  }
+  inpName.addEventListener('input', checkStep3);
+  inpPhone.addEventListener('input', checkStep3);
+
+  document.getElementById('toStep3').addEventListener('click', () => goToStep(3));
+
+  document.getElementById('toStep4').addEventListener('click', () => {
+    state.name = inpName.value.trim();
+    state.phone = inpPhone.value.trim();
+    state.patient = inpPatient.value;
+    state.notes = inpNotes.value.trim();
+    const d = dates[state.dateIdx];
+    const dateStr = `${d.getDate()} de ${['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][d.getMonth()]}`;
+    document.getElementById('summaryBox').innerHTML = `
+      <div class="summary-row"><span>Procedimento</span><span>${state.service.name}</span></div>
+      <div class="summary-row"><span>Dentista</span><span>${state.dentist.name}</span></div>
+      <div class="summary-row"><span>Data</span><span>${dateStr}</span></div>
+      <div class="summary-row"><span>Horário</span><span>${state.time}</span></div>
+      <div class="summary-row"><span>Valor</span><span>${state.service.price}</span></div>
+      <div class="summary-row"><span>Paciente</span><span>${state.name}</span></div>
+      <div class="summary-row"><span>Situação</span><span>${state.patient === 'new' ? 'Primeira consulta' : 'Paciente da clínica'}</span></div>
+    `;
+    goToStep(4);
+  });
+
+  document.querySelectorAll('[data-back]').forEach(btn => {
+    btn.addEventListener('click', () => goToStep(parseInt(btn.dataset.back)));
+  });
+
+  document.getElementById('confirmBtn').addEventListener('click', () => {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step5').classList.add('active');
+    document.querySelectorAll('.seg').forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+    document.getElementById('confirmSummary').textContent =
+      `Você vai receber a confirmação no WhatsApp (${state.phone || 'seu número'}) com todos os detalhes da consulta com ${state.dentist.name}.`;
+  });
+
+  document.getElementById('restartBtn').addEventListener('click', () => {
+    state = { service: null, dentist: dentists[0], dateIdx: null, time: null, name: '', phone: '', patient: 'new', notes: '' };
+    document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('.dentist-chip').forEach((c,i) => c.classList.toggle('selected', i===0));
+    document.getElementById('toStep2').disabled = true;
+    dateRow.innerHTML = ''; slotGrid.innerHTML = '';
+    renderDates();
+    inpName.value = ''; inpPhone.value = ''; inpNotes.value = ''; inpPatient.value = 'new';
+    document.getElementById('toStep3').disabled = true;
+    document.getElementById('toStep4').disabled = true;
+    goToStep(1);
+  });
+
+  document.getElementById('ownerToggle').addEventListener('click', () => {
+    const panel = document.getElementById('ownerPanel');
+    panel.classList.toggle('open');
+    document.getElementById('ownerToggle').textContent = panel.classList.contains('open')
+      ? '← Voltar pra visão do paciente'
+      : 'Ver como fica o painel da clínica →';
+  });
+</script>
+</body>
+</html>
